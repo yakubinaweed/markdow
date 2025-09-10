@@ -653,17 +653,28 @@ gmmServer <- function(input, output, session, gmm_uploaded_data_rv, gmm_processe
 
       # --- Generate and save the BIC plot ---
       bic_models <- gmm_models_bic_rv()
-      # Check if the BIC object is valid and has data
-      if (!is.null(bic_models) && !is.null(bic_models$BIC)) {
+      # Check if any of the BIC model objects are valid
+      if (!is.null(bic_models$male) || !is.null(bic_models$female) || !is.null(bic_models$combined)) {
         temp_bic_plot_path <- file.path(temp_dir, "gmm_bic_plot.png")
         png(temp_bic_plot_path, width = 800, height = 450, res = 100)
         
-        # Corrected plot call: Removed the invalid 'legend.args' parameter
-        plot(bic_models$BIC,
-            main = "BIC for GMM Models",
-            xlab = "Number of Components",
-            ylab = "BIC Value")
-            
+        # Adjust plot layout based on number of models
+        if (!is.null(bic_models$male) && !is.null(bic_models$female)) {
+          par(mfrow = c(1, 2))
+        } else {
+          par(mfrow = c(1, 1))
+        }
+
+        if (!is.null(bic_models$male)) {
+          plot(bic_models$male, what = "BIC", main = "BIC for Male Data")
+        }
+        if (!is.null(bic_models$female)) {
+          plot(bic_models$female, what = "BIC", main = "BIC for Female Data")
+        }
+        if (!is.null(bic_models$combined)) {
+          plot(bic_models$combined, what = "BIC", main = "BIC for Combined Data")
+        }
+        
         dev.off()
       }
 
@@ -671,11 +682,8 @@ gmmServer <- function(input, output, session, gmm_uploaded_data_rv, gmm_processe
       processed_data <- gmm_processed_data_rv()
       if (!is.null(processed_data) && !is.null(processed_data$bic)) {
         temp_scatter_plot_path <- file.path(temp_dir, "gmm_scatter_plot.png")
-        png(temp_scatter_plot_path, width = 800, height = 600, res = 100)
-        
-        plot_value_age(processed_data$bic, input$gmm_value_col, input$gmm_age_col)
-        
-        dev.off()
+        # Use ggsave for ggplot2 objects
+        ggsave(temp_scatter_plot_path, plot = plot_value_age(processed_data$bic, input$gmm_value_col, input$gmm_age_col), width = 10, height = 7)
       }
 
       # --- Capture the summary text ---
@@ -683,13 +691,21 @@ gmmServer <- function(input, output, session, gmm_uploaded_data_rv, gmm_processe
         cat("GMM Analysis Summary:\n")
         cat("======================\n\n")
         
-        if (!is.null(processed_data) && inherits(processed_data$bic, "Mclust")) {
-          gmm_results <- processed_data$bic
-          cat("Model chosen by BIC:", gmm_results$modelName, "\n")
-          cat("Number of components (subpopulations):", gmm_results$G, "\n\n")
-          print(summary(gmm_results, parameters = TRUE))
+        models <- gmm_models_bic_rv()
+        if (!is.null(models$combined) && inherits(models$combined, "Mclust")) {
+            generate_subpop_summary(models$combined, processed_data$bic, "Combined", input$gmm_value_col, input$gmm_age_col)
         } else {
-          cat("No GMM results available to summarize. Please run the analysis first.")
+            if (!is.null(models$male) && inherits(models$male, "Mclust")) {
+                generate_subpop_summary(models$male, processed_data$bic, "Male", input$gmm_value_col, input$gmm_age_col)
+            } else {
+                cat("No male subpopulations detected.\n")
+            }
+            
+            if (!is.null(models$female) && inherits(models$female, "Mclust")) {
+                generate_subpop_summary(models$female, processed_data$bic, "Female", input$gmm_value_col, input$gmm_age_col)
+            } else {
+                cat("No female subpopulations detected.\n")
+            }
         }
       })
 
