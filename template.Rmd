@@ -1,20 +1,27 @@
 ---
 title: "RefineR Analysis Report"
-output: pdf_document
+output: 
+  pdf_document:
+    latex_engine: xelatex
 params:
-  plot_result: NULL
+  plot_path: NULL
   text_result: NULL
+mainfont: Arial
+sansfont: Helvetica
+header-includes:
+  - \usepackage{titlesec}
+  - \usepackage{sectsty}
+  - \titleformat{\title}{\sffamily\Huge}{\thetitle}{1em}{}
+  - \allsectionsfont{\sffamily}
 ---
 
-## Analysis Output
-
-### Result Plot
+# Result Plot
 ```{r, echo=FALSE, fig.cap="RefineR analysis plot."}
 if (!is.null(params$plot_path) && file.exists(params$plot_path)) {
   knitr::include_graphics(params$plot_path)
 }
 
-### Summary
+# Summary
 if (!is.null(params$text_result)) {
   cat(params$text_result, sep = "\n")
 }
