@@ -298,18 +298,14 @@ mainServer <- function(input, output, session, data_reactive, selected_dir_react
   # =========================================================================
   output$download_report <- downloadHandler(
     filename = function() {
-      paste0("RefineR_Report_", Sys.Date(), ".pdf")  # final output as PDF
+      paste0("Main_Analysis_Report_", Sys.Date(), ".pdf")
     },
     content = function(file) {
-      # Create a temporary directory
       temp_dir <- tempdir()
-      temp_report <- file.path(temp_dir, "report.Rmd")
-      
-      # Copy the template
-      file.copy("template.Rmd", temp_report, overwrite = TRUE)
-      
-      # Generate plot
-      temp_plot_path <- file.path(temp_dir, "refiner_plot.png")
+      temp_report <- file.path(temp_dir, "template_main.Rmd")
+      file.copy("template_main.Rmd", temp_report, overwrite = TRUE)
+
+      temp_plot_path <- file.path(temp_dir, "main_plot.png")
       png(temp_plot_path, width = 800, height = 600)
       generate_refiner_plot(
         refiner_model_rv(),
@@ -319,8 +315,7 @@ mainServer <- function(input, output, session, data_reactive, selected_dir_react
         input$ref_high
       )
       dev.off()
-      
-      # Capture summary
+
       text_output <- capture.output({
         if (!is.null(filtered_data_reactive()$removed_rows)) {
           cat(paste0("Note: ",
@@ -329,22 +324,18 @@ mainServer <- function(input, output, session, data_reactive, selected_dir_react
         }
         print(refiner_model_rv())
       })
-      
-      # Render HTML first to a temporary file
+
       temp_html <- file.path(temp_dir, "report.html")
       rmarkdown::render(
         input = temp_report,
         output_file = temp_html,
-        output_format = rmarkdown::html_document(toc = TRUE),
         params = list(
           plot_path = temp_plot_path,
           text_result = text_output
         ),
         envir = new.env(parent = globalenv())
       )
-      
-      # Convert the HTML to PDF using pagedown
-      # Make sure pagedown is installed: install.packages("pagedown")
+
       pagedown::chrome_print(input = temp_html, output = file)
     }
   )

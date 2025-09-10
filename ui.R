@@ -95,6 +95,7 @@ ui <- navbarPage(
         
         actionButton("analyze_btn", "Run Analysis", class = "btn-primary"),
         actionButton("reset_btn", "Reset File", class = "btn-secondary"),
+        downloadButton("download_report", "Download Report"),
         shinyFiles::shinyDirButton(id = "select_dir_btn", label = "Select Output Directory", title = "Select a directory to save plots", style = "margin-top: 5px;"),
         div(style = "margin-top: 5px; display: flex; align-items: center; justify-content: flex-start; width: 100%;",
             prettySwitch(inputId = "enable_directory", label = "Auto-Save Graph", status = "success", fill = TRUE, inline = TRUE)
@@ -107,8 +108,7 @@ ui <- navbarPage(
       ),
       mainPanel(
         plotOutput("result_plot"),
-        verbatimTextOutput("result_text"),
-        downloadButton("download_report", "Download Report")
+        verbatimTextOutput("result_text")
       )
     )
   ),
@@ -156,6 +156,7 @@ ui <- navbarPage(
             uiOutput("gmm_manual_model_ui"),
             actionButton("run_gmm_analysis_btn", "Run Analysis", class = "btn-primary"),
             actionButton("reset_gmm_analysis_btn", "Reset File", class = "btn-secondary"),
+            downloadButton("download_gmm_report", "Download GMM Report"),
             div(style = "margin-top: 15px;", uiOutput("app_message"))
           )
         )
@@ -224,7 +225,8 @@ ui <- navbarPage(
         
         div(class = "parallel-buttons",
             actionButton("run_parallel_btn", "Run Parallel Analysis", class = "btn-primary"),
-            actionButton("reset_parallel_btn", "Reset File", class = "btn-secondary")
+            actionButton("reset_parallel_btn", "Reset File", class = "btn-secondary"),
+            downloadButton("download_parallel_report", "Download Parallel Report")
         ),
         div(style = "margin-top: 15px;", uiOutput("parallel_message")),
         hr(),

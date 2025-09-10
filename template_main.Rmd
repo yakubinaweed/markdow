@@ -1,0 +1,48 @@
+---
+title: "Main Analysis Report"
+output: html_document
+params:
+  plot_path: NULL
+  text_result: NULL
+---
+
+<style>
+body {
+  font-family: Arial, sans-serif;
+  line-height: 1.6;
+}
+h1, h2, h3 {
+  color: #333;
+}
+.summary {
+  background-color: #f5f5f5;
+  border: 1px solid #ddd;
+  padding: 15px;
+  border-radius: 5px;
+}
+</style>
+
+# Main RefineR Analysis Report
+
+### Analysis performed on `r format(Sys.time(), '%Y-%m-%d %H:%M:%S')`
+
+## Result Plot
+
+```{r, echo=FALSE, fig.cap="RefineR analysis plot.", out.width="100%"}
+if (!is.null(params$plot_path) && file.exists(params$plot_path)) {
+  knitr::include_graphics(params$plot_path)
+} else {
+  "Plot not available."
+}
+
+## Summary
+<div class="summary">
+<pre>
+if (!is.null(params$text_result)) {
+  cat(params$text_result, sep = &quot;\n&quot;)
+} else {
+  &quot;Summary not available.&quot;
+}
+</pre>
+</div>
+

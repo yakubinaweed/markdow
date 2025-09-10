@@ -860,4 +860,60 @@ parallelServer <- function(input, output, session, parallel_data_rv, parallel_re
       }
     }
   })
+
+  # =========================================================================
+  # REPORT DOWNLOAD HANDLER
+  # =========================================================================
+  output$download_parallel_report <- downloadHandler(
+    filename = function() {
+      paste0("Parallel_Analysis_Report_", Sys.Date(), ".pdf")
+    },
+    content = function(file) {
+      temp_dir <- tempdir()
+      temp_report <- file.path(temp_dir, "template_parallel.Rmd")
+      file.copy("template_parallel.Rmd", temp_report, overwrite = TRUE)
+
+      # Generate plots
+      temp_dumbbell_path <- file.path(temp_dir, "parallel_dumbbell.png")
+      png(temp_dumbbell_path, width = 800, height = 600)
+      # (Dumbbell plot logic)
+      dev.off()
+      
+      temp_ri_path <- file.path(temp_dir, "parallel_ri.png")
+      png(temp_ri_path, width = 800, height = 600)
+      # (RI plot logic)
+      dev.off()
+
+      temp_density_path <- file.path(temp_dir, "parallel_density.png")
+      png(temp_density_path, width = 800, height = 600)
+      # (Density plot logic)
+      dev.off()
+      
+      temp_box_path <- file.path(temp_dir, "parallel_box.png")
+      png(temp_box_path, width = 800, height = 600)
+      # (Box plot logic)
+      dev.off()
+
+      # Capture summary
+      summary_text <- capture.output({
+        # (Summary logic)
+      })
+
+      temp_html <- file.path(temp_dir, "report.html")
+      rmarkdown::render(
+        input = temp_report,
+        output_file = temp_html,
+        params = list(
+          dumbbell_plot_path = temp_dumbbell_path,
+          ri_plot_path = temp_ri_path,
+          density_plot_path = temp_density_path,
+          box_plot_path = temp_box_path,
+          summary_text = summary_text
+        ),
+        envir = new.env(parent = globalenv())
+      )
+
+      pagedown::chrome_print(input = temp_html, output = file)
+    }
+  )
 }

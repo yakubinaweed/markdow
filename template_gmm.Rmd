@@ -1,0 +1,55 @@
+---
+title: "GMM Analysis Report"
+output: html_document
+params:
+  bic_plot_path: NULL
+  scatter_plot_path: NULL
+  summary_text: NULL
+---
+
+<style>
+body {
+  font-family: Arial, sans-serif;
+  line-height: 1.6;
+}
+h1, h2, h3 {
+  color: #333;
+}
+.summary {
+  background-color: #f5f5f5;
+  border: 1px solid #ddd;
+  padding: 15px;
+  border-radius: 5px;
+}
+</style>
+
+# GMM Subpopulation Detection Report
+
+### Analysis performed on `r format(Sys.time(), '%Y-%m-%d %H:%M:%S')`
+
+## BIC Plot
+
+```{r, echo=FALSE, fig.cap="BIC plot for GMM analysis.", out.width="100%"}
+if (!is.null(params$bic_plot_path) && file.exists(params$bic_plot_path)) {
+  knitr::include_graphics(params$bic_plot_path)
+} else {
+  "BIC plot not available."
+}
+
+## GMM Scatter Plot
+if (!is.null(params$scatter_plot_path) && file.exists(params$scatter_plot_path)) {
+  knitr::include_graphics(params$scatter_plot_path)
+} else {
+  "Scatter plot not available."
+}
+
+## GMM Summary
+<div class="summary">
+<pre>
+if (!is.null(params$summary_text)) {
+  cat(params$summary_text, sep = &quot;\n&quot;)
+} else {
+  &quot;Summary not available.&quot;
+}
+</pre>
+</div>
