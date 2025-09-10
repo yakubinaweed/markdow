@@ -2,67 +2,67 @@
 title: "Parallel Analysis Report"
 output: html_document
 params:
-  dumbbell_plot_path: NULL
-  ri_plot_path: NULL
-  density_plot_path: NULL
-  box_plot_path: NULL
-  summary_text: NULL
+  dumbbell_plot_path: NA
+  ri_plot_path: NA
+  density_plot_path: NA
+  box_plot_path: NA
+  summary_text: "No summary available."
+  individual_plots: list()
+  individual_summaries: list()
 ---
 
 <style>
-body {
-  font-family: Arial, sans-serif;
-  line-height: 1.6;
-}
-h1, h2, h3 {
-  color: #333;
-}
-.summary {
-  background-color: #f5f5f5;
-  border: 1px solid #ddd;
-  padding: 15px;
-  border-radius: 5px;
-  white-space: pre-wrap; /* Ensures line breaks are respected */
-}
+  body { font-family: sans-serif; }
+  h1, h2, h3 { color: #333; }
+  img { max-width: 100%; height: auto; border: 1px solid #ddd; padding: 4px; }
+  pre { background-color: #f5f5f5; border: 1px solid #ddd; padding: 10px; white-space: pre-wrap; word-wrap: break-word; }
 </style>
 
 # Parallel Analysis Report
 
-### Analysis performed on `r format(Sys.time(), '%Y-%m-%d %H:%M:%S')`
+Analysis performed on `r format(Sys.time(), '%Y-%m-%d %H:%M:%S')`
 
-## Dumbbell Plot
+---
 
-```{r, echo=FALSE, fig.cap="Dumbbell plot of reference intervals.", out.width="100%"}
-if (!is.null(params$dumbbell_plot_path) && file.exists(params$dumbbell_plot_path)) {
-  knitr::include_graphics(params$dumbbell_plot_path)
+## Combined Analysis Plots
+
+### Dumbbell Plot of Reference Intervals
+
+![Dumbbell Plot](`r params$dumbbell_plot_path`)
+
+### Combined Reference Intervals Plot
+
+![RI Plot](`r params$ri_plot_path`)
+
+### Combined Density Plot
+
+![Density Plot](`r params$density_plot_path`)
+
+### Combined Box Plot
+
+![Box Plot](`r params$box_plot_path`)
+
+---
+
+## Combined Summary
+
+```{r, results='asis', echo=FALSE}
+cat(params$summary_text)
+
+## Individual Subpopulation Results
+
+if (length(params$individual_plots) > 0) {
+  for (i in seq_along(params$individual_plots)) {
+    cat("### Subpopulation Plot\n\n")
+    cat(paste0("![Subpopulation Plot ", i, "](", params$individual_plots[[i]], ")\n\n"))
+    
+    cat("### Subpopulation Summary\n\n")
+    cat("```\n")
+    cat(params$individual_summaries[[i]])
+    cat("\n```\n\n")
+    
+    cat("<hr>\n\n")
+  }
 } else {
-  "Dumbbell plot not available."
-}
-
-## Reference Interval Plot
-if (!is.null(params$ri_plot_path) && file.exists(params$ri_plot_path)) {
-  knitr::include_graphics(params$ri_plot_path)
-} else {
-  "RI plot not available."
-}
-
-## Density Plot
-if (!is.null(params$density_plot_path) && file.exists(params$density_plot_path)) {
-  knitr::include_graphics(params$density_plot_path)
-} else {
-  "Density plot not available."
-}
-
-## Box Plot
-if (!is.null(params$box_plot_path) && file.exists(params$box_plot_path)) {
-  knitr::include_graphics(params$box_plot_path)
-} else {
-  "Box plot not available."
-}
-
-## Summary
-if (!is.null(params$summary_text)) {
-  cat(params$summary_text, sep = "\n")
-} else {
-  "Summary not available."
+  cat("No individual results were generated or available for the report.\n")
 }

@@ -783,13 +783,13 @@ parallelServer <- function(input, output, session, parallel_data_rv, parallel_re
     },
     content = function(file) {
       # Ensure results are available before proceeding
-      req(parallel_results_rv(), combined_summary_table())
+      req(parallel_results_rv())
 
       temp_dir <- tempdir()
       temp_report_path <- file.path(temp_dir, "template_parallel.Rmd")
       file.copy("template_parallel.Rmd", temp_report_path, overwrite = TRUE)
 
-      # --- Generate and save plots ---
+      # --- Generate and save COMBINED plots ---
       temp_dumbbell_path <- file.path(temp_dir, "parallel_dumbbell.png")
       ggsave(temp_dumbbell_path, plot = dumbbell_plot_object(), width = 10, height = 7)
 
@@ -802,9 +802,41 @@ parallelServer <- function(input, output, session, parallel_data_rv, parallel_re
       temp_box_path <- file.path(temp_dir, "parallel_box.png")
       ggsave(temp_box_path, plot = box_plot_object(), width = 10, height = 7)
 
-      # --- Capture summary ---
+      # --- Capture COMBINED summary ---
       summary_text <- summary_text_object()
       
+      # --- Generate and save INDIVIDUAL plots and summaries ---
+      individual_plot_paths <- c()
+      individual_summary_texts <- c()
+      
+      results <- parallel_results_rv()
+      if (length(results) > 0) {
+        for (i in seq_along(results)) {
+          result <- results[[i]]
+          if (result$status == "success") {
+            # Save plot
+            temp_individual_plot_path <- file.path(temp_dir, paste0("individual_plot_", i, ".png"))
+            png(temp_individual_plot_path, width = 800, height = 600, res = 100)
+            model <- result$model
+            value_col_name <- input$parallel_col_value
+            model_type <- switch(result$final_model, "BoxCox" = " (BoxCox Transformed)", "modBoxCox" = " (modBoxCox Transformed)")
+            plot_title <- paste0("Estimated RI for ", value_col_name, model_type, " (", result$label, ")")
+            xlab_text <- if (!is.null(input$parallel_unit_input) && input$parallel_unit_input != "") { paste0(value_col_name, " [", input$parallel_unit_input, "]") } else { value_col_name }
+            plot(model, showCI = TRUE, RIperc = c(0.025, 0.975), showPathol = FALSE, title = plot_title, xlab = xlab_text)
+            dev.off()
+            individual_plot_paths <- c(individual_plot_paths, temp_individual_plot_path)
+
+            # Capture summary
+            individual_summary <- capture.output({
+              cat("--- RefineR Summary for ", result$label, " ---\n")
+              cat(paste0("Note: ", result$removed_rows, " rows were removed due to missing or invalid data.\n"))
+              print(model)
+            })
+            individual_summary_texts <- c(individual_summary_texts, paste(individual_summary, collapse = "\n"))
+          }
+        }
+      }
+
       # --- Render the report ---
       temp_html_path <- file.path(temp_dir, "report.html")
       rmarkdown::render(
@@ -815,7 +847,9 @@ parallelServer <- function(input, output, session, parallel_data_rv, parallel_re
           ri_plot_path = temp_ri_path,
           density_plot_path = temp_density_path,
           box_plot_path = temp_box_path,
-          summary_text = summary_text
+          summary_text = summary_text,
+          individual_plots = individual_plot_paths,
+          individual_summaries = individual_summary_texts
         ),
         envir = new.env(parent = globalenv())
       )
