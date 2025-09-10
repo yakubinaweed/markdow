@@ -292,4 +292,38 @@ mainServer <- function(input, output, session, data_reactive, selected_dir_react
                           sprintf("%s [%s]", input$col_value, input$unit_input),
                           input$ref_low, input$ref_high)
   })
+
+   # =========================================================================
+  # REPORT DOWNLOAD HANDLER
+  # =========================================================================
+  output$download_report <- downloadHandler(
+    filename = function() {
+      paste0("RefineR_Report_", Sys.Date(), ".html")
+    },
+    content = function(file) {
+      # Save current plot to object
+      plot_obj <- recordPlot()
+
+      # Capture summary text
+      text_output <- capture.output({
+        if (!is.null(filtered_data_reactive()$removed_rows)) {
+          cat(paste0("Note: ",
+                     filtered_data_reactive()$removed_rows,
+                     " rows were removed due to missing or invalid data.\n\n"))
+        }
+        print(refiner_model_rv())
+      })
+
+      # Render the R Markdown file with parameters
+      rmarkdown::render(
+        input = "report.Rmd",
+        output_file = file,
+        params = list(
+          plot_result = plot_obj,
+          text_result = text_output
+        ),
+        envir = new.env(parent = globalenv())
+      )
+    }
+  )
 }

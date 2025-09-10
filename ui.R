@@ -107,7 +107,8 @@ ui <- navbarPage(
       ),
       mainPanel(
         plotOutput("result_plot"),
-        verbatimTextOutput("result_text")
+        verbatimTextOutput("result_text"),
+        downloadButton("download_report", "Download Report")
       )
     )
   ),

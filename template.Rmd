@@ -1,0 +1,14 @@
+---
+title: "RefineR Analysis Report"
+output: html_document
+params:
+  plot_result: NULL
+  text_result: NULL
+---
+
+## Analysis Output
+
+### Result Plot
+```{r, echo=FALSE}
+params$plot_result
+cat(params$text_result, sep = "\n")
