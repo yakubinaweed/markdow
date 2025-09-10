@@ -688,52 +688,58 @@ parallelServer <- function(input, output, session, parallel_data_rv, parallel_re
     box_plot_object()
   })
   
-  # Renders the combined text summary for all successful subpopulations
-  output$combined_summary <- renderPrint({
+  # Reactive expression to generate the summary text
+  summary_text_object <- reactive({
     results <- parallel_results_rv()
     if (is.null(results) || length(results) == 0) {
-      cat("No parallel analysis results to summarize yet.")
-      return(NULL)
+      return("No parallel analysis results to summarize yet.")
     }
     
-    cat("--- Combined Summary of Reference Intervals ---\n\n")
-    cat("Table Column Key:\n")
-    cat("  RI Lower/Upper: The estimated Reference Interval limits.\n")
-    cat("  CI Lower (Lower)/CI Lower (Upper): The Confidence Interval for the RI Lower limit.\n")
-    cat("  CI Upper (Lower)/CI Upper (Upper): The Confidence Interval for the RI Upper limit.\n\n")
+    summary_lines <- c("--- Combined Summary of Reference Intervals ---\n")
+    summary_lines <- c(summary_lines, "Table Column Key:")
+    summary_lines <- c(summary_lines, "  RI Lower/Upper: The estimated Reference Interval limits.")
+    summary_lines <- c(summary_lines, "  CI Lower (Lower)/CI Lower (Upper): The Confidence Interval for the RI Lower limit.")
+    summary_lines <- c(summary_lines, "  CI Upper (Lower)/CI Upper (Upper): The Confidence Interval for the RI Upper limit.\n")
 
     has_successful_results <- FALSE
     for (r in results) {
       if (r$status == "success") {
         has_successful_results <- TRUE
         
-        cat(paste0("Subpopulation: ", r$label, "\n"))
-        cat(paste0("  Sample Size ", nrow(r$raw_data), "\n"))
-        cat(paste0("  Rows Removed: ", r$removed_rows, "\n"))
-        cat(paste0("  Estimated RI Lower Limit: ", round(r$ri_low_fulldata, 3), "\n"))
-        cat(paste0("  Confidence Interval for Lower Limit: [", round(r$ci_low_low, 3), ", ", round(r$ci_low_high, 3), "]\n"))
-        cat(paste0("  Estimated RI Upper Limit: ", round(r$ri_high_fulldata, 3), "\n"))
-        cat(paste0("  Confidence Interval for Upper Limit: [", round(r$ci_high_low, 3), ", ", round(r$ci_high_high, 3), "]\n"))
+        summary_lines <- c(summary_lines, paste0("Subpopulation: ", r$label))
+        summary_lines <- c(summary_lines, paste0("  Sample Size ", nrow(r$raw_data)))
+        summary_lines <- c(summary_lines, paste0("  Rows Removed: ", r$removed_rows))
+        summary_lines <- c(summary_lines, paste0("  Estimated RI Lower Limit: ", round(r$ri_low_fulldata, 3)))
+        summary_lines <- c(summary_lines, paste0("  Confidence Interval for Lower Limit: [", round(r$ci_low_low, 3), ", ", round(r$ci_low_high, 3), "]"))
+        summary_lines <- c(summary_lines, paste0("  Estimated RI Upper Limit: ", round(r$ri_high_fulldata, 3)))
+        summary_lines <- c(summary_lines, paste0("  Confidence Interval for Upper Limit: [", round(r$ci_high_low, 3), ", ", round(r$ci_high_high, 3), "]"))
         
         if(r$final_model != input$parallel_model_choice) {
-          cat(paste0("  Transformation Model: Auto-selected ", r$final_model, " (from user's '", input$parallel_model_choice, "' choice)\n"))
+          summary_lines <- c(summary_lines, paste0("  Transformation Model: Auto-selected ", r$final_model, " (from user's '", input$parallel_model_choice, "' choice)"))
         } else {
-          cat(paste0("  Transformation Model: ", r$final_model, "\n"))
+          summary_lines <- c(summary_lines, paste0("  Transformation Model: ", r$final_model))
         }
 
         if (!is.null(input$parallel_unit_input) && input$parallel_unit_input != "") {
-          cat(paste0("  Unit of Measurement: ", input$parallel_unit_input, "\n"))
+          summary_lines <- c(summary_lines, paste0("  Unit of Measurement: ", input$parallel_unit_input))
         }
-        cat("\n")
+        summary_lines <- c(summary_lines, "")
       } else if (r$status == "error") {
-        cat(paste0("Subpopulation: ", r$label, " (Analysis Failed)\n"))
-        cat(paste0("  Reason: ", r$message, "\n\n"))
+        summary_lines <- c(summary_lines, paste0("Subpopulation: ", r$label, " (Analysis Failed)"))
+        summary_lines <- c(summary_lines, paste0("  Reason: ", r$message, "\n"))
       }
     }
 
     if (!has_successful_results) {
-      cat("No successful reference intervals were found to summarize.\n")
+      summary_lines <- c(summary_lines, "No successful reference intervals were found to summarize.")
     }
+    
+    return(paste(summary_lines, collapse = "\n"))
+  })
+
+  # Renders the combined text summary for all successful subpopulations
+  output$combined_summary <- renderPrint({
+    cat(summary_text_object())
   })
 
   # =========================================================================
@@ -797,13 +803,7 @@ parallelServer <- function(input, output, session, parallel_data_rv, parallel_re
       ggsave(temp_box_path, plot = box_plot_object(), width = 10, height = 7)
 
       # --- Capture summary ---
-      summary_text_output <- capture.output({
-        results <- parallel_results_rv()
-        # This duplicates the logic from the renderPrint to ensure consistency
-        # ... (summary logic as above) ...
-        # For brevity, reusing the existing renderPrint logic:
-        print(output$combined_summary())
-      })
+      summary_text <- summary_text_object()
       
       # --- Render the report ---
       temp_html_path <- file.path(temp_dir, "report.html")
@@ -815,7 +815,7 @@ parallelServer <- function(input, output, session, parallel_data_rv, parallel_re
           ri_plot_path = temp_ri_path,
           density_plot_path = temp_density_path,
           box_plot_path = temp_box_path,
-          summary_text = paste(summary_text_output, collapse = "\n")
+          summary_text = summary_text
         ),
         envir = new.env(parent = globalenv())
       )
