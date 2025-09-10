@@ -19,6 +19,7 @@ h1, h2, h3 {
   border: 1px solid #ddd;
   padding: 15px;
   border-radius: 5px;
+  white-space: pre-wrap; /* Ensures line breaks are respected */
 }
 </style>
 
@@ -36,13 +37,8 @@ if (!is.null(params$plot_path) && file.exists(params$plot_path)) {
 }
 
 ## Summary
-<div class="summary">
-<pre>
 if (!is.null(params$text_result)) {
-  cat(params$text_result, sep = &quot;\n&quot;)
+  cat(params$text_result, sep = "\n")
 } else {
-  &quot;Summary not available.&quot;
+  "Summary not available."
 }
-</pre>
-</div>
-

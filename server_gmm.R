@@ -639,42 +639,72 @@ gmmServer <- function(input, output, session, gmm_uploaded_data_rv, gmm_processe
       paste0("GMM_Report_", Sys.Date(), ".pdf")
     },
     content = function(file) {
+      # Ensure results are available before attempting to generate a report
+      req(gmm_models_bic_rv(), gmm_processed_data_rv())
+
+      # Create a temporary directory to store the report and its assets
       temp_dir <- tempdir()
-      temp_report <- file.path(temp_dir, "template_gmm.Rmd")
-      file.copy("template_gmm.Rmd", temp_report, overwrite = TRUE)
+      temp_report_path <- file.path(temp_dir, "template_gmm.Rmd")
+      file.copy("template_gmm.Rmd", temp_report_path, overwrite = TRUE)
 
-      # Generate BIC plot
+      # --- Generate and save the BIC plot ---
       temp_bic_plot_path <- file.path(temp_dir, "gmm_bic_plot.png")
-      png(temp_bic_plot_path, width = 800, height = 400)
-      # Re-create BIC plot logic here as it's not directly available
-      models <- gmm_models_bic_rv()
-      # (Plotting logic from renderPlot)
-      dev.off()
+      png(temp_bic_plot_path, width = 800, height = 450, res = 100)
+      
+      # Explicitly get the BIC models from the reactive value
+      bic_models <- gmm_models_bic_rv()
+      
+      # Plotting logic, ensuring it handles the data correctly
+      plot(bic_models$BIC,
+          legend.args = list(x = "bottomright", cex = 1.1, inset = c(0, 0.05)),
+          main = "BIC for GMM Models",
+          xlab = "Number of Components",
+          ylab = "BIC Value")
+          
+      dev.off() # Close the PNG device
 
-      # Generate Scatter plot
+      # --- Generate and save the Scatter plot ---
       temp_scatter_plot_path <- file.path(temp_dir, "gmm_scatter_plot.png")
-      png(temp_scatter_plot_path, width = 800, height = 600)
+      png(temp_scatter_plot_path, width = 800, height = 600, res = 100)
+      
+      # Use the plotting function defined in the GMM server logic
       plot_value_age(gmm_processed_data_rv()$bic, input$gmm_value_col, input$gmm_age_col)
-      dev.off()
+      
+      dev.off() # Close the PNG device
 
-      # Capture summary
-      summary_text <- capture.output({
-        # (Summary logic from renderPrint)
+      # --- Capture the summary text ---
+      summary_text_output <- capture.output({
+        cat("GMM Analysis Summary:\n")
+        cat("======================\n\n")
+        
+        # Use the 'bic' object from the reactive value for the summary
+        gmm_results <- gmm_processed_data_rv()$bic
+        
+        if (!is.null(gmm_results) && inherits(gmm_results, "Mclust")) {
+          cat("Model chosen by BIC:", gmm_results$modelName, "\n")
+          cat("Number of components (subpopulations):", gmm_results$G, "\n\n")
+          print(summary(gmm_results, parameters = TRUE))
+        } else {
+          cat("No GMM results available to summarize.")
+        }
       })
 
-      temp_html <- file.path(temp_dir, "report.html")
+      # --- Render the report ---
+      temp_html_path <- file.path(temp_dir, "report.html")
       rmarkdown::render(
-        input = temp_report,
-        output_file = temp_html,
+        input = temp_report_path,
+        output_file = temp_html_path,
         params = list(
           bic_plot_path = temp_bic_plot_path,
           scatter_plot_path = temp_scatter_plot_path,
-          summary_text = summary_text
+          summary_text = paste(summary_text_output, collapse = "\n")
         ),
-        envir = new.env(parent = globalenv())
+        envir = new.env(parent = globalenv()) # Use a clean environment
       )
 
-      pagedown::chrome_print(input = temp_html, output = file)
-    }
+      # Convert HTML to PDF
+      pagedown::chrome_print(input = temp_html_path, output = file)
+    },
+    contentType = "application/pdf"
   )
 }

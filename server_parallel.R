@@ -869,51 +869,62 @@ parallelServer <- function(input, output, session, parallel_data_rv, parallel_re
       paste0("Parallel_Analysis_Report_", Sys.Date(), ".pdf")
     },
     content = function(file) {
-      temp_dir <- tempdir()
-      temp_report <- file.path(temp_dir, "template_parallel.Rmd")
-      file.copy("template_parallel.Rmd", temp_report, overwrite = TRUE)
+      # Ensure results are available
+      req(parallel_results_rv())
 
-      # Generate plots
+      temp_dir <- tempdir()
+      temp_report_path <- file.path(temp_dir, "template_parallel.Rmd")
+      file.copy("template_parallel.Rmd", temp_report_path, overwrite = TRUE)
+
+      # Access the reactive results
+      results <- parallel_results_rv()
+      filtered_results <- filter_parallel_results(results, input$parallel_gender_filter)
+
+      # --- Generate and save plots ---
       temp_dumbbell_path <- file.path(temp_dir, "parallel_dumbbell.png")
-      png(temp_dumbbell_path, width = 800, height = 600)
-      # (Dumbbell plot logic)
+      png(temp_dumbbell_path, width = 800, height = 600, res = 100)
+      print(plot_dumbbell(filtered_results)) # Use print() for ggplot objects
       dev.off()
-      
+
       temp_ri_path <- file.path(temp_dir, "parallel_ri.png")
-      png(temp_ri_path, width = 800, height = 600)
-      # (RI plot logic)
+      png(temp_ri_path, width = 800, height = 600, res = 100)
+      print(plot_combined_ri(filtered_results, input$parallel_unit_input))
       dev.off()
 
       temp_density_path <- file.path(temp_dir, "parallel_density.png")
-      png(temp_density_path, width = 800, height = 600)
-      # (Density plot logic)
+      png(temp_density_path, width = 800, height = 600, res = 100)
+      print(plot_combined_density(filtered_results, input$parallel_unit_input))
       dev.off()
-      
+
       temp_box_path <- file.path(temp_dir, "parallel_box.png")
-      png(temp_box_path, width = 800, height = 600)
-      # (Box plot logic)
+      png(temp_box_path, width = 800, height = 600, res = 100)
+      print(plot_combined_box(filtered_results, input$parallel_unit_input))
       dev.off()
 
-      # Capture summary
-      summary_text <- capture.output({
-        # (Summary logic)
+      # --- Capture summary ---
+      summary_text_output <- capture.output({
+        print(generate_combined_summary(filtered_results))
       })
-
-      temp_html <- file.path(temp_dir, "report.html")
+      
+      # --- Render the report ---
+      temp_html_path <- file.path(temp_dir, "report.html")
       rmarkdown::render(
-        input = temp_report,
-        output_file = temp_html,
+        input = temp_report_path,
+        output_file = temp_html_path,
         params = list(
           dumbbell_plot_path = temp_dumbbell_path,
           ri_plot_path = temp_ri_path,
           density_plot_path = temp_density_path,
           box_plot_path = temp_box_path,
-          summary_text = summary_text
+          summary_text = paste(summary_text_output, collapse = "\n")
         ),
         envir = new.env(parent = globalenv())
       )
 
-      pagedown::chrome_print(input = temp_html, output = file)
-    }
+      # Convert HTML to PDF
+      pagedown::chrome_print(input = temp_html_path, output = file)
+    },
+    contentType = "application/pdf"
   )
+
 }
