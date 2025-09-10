@@ -1,6 +1,6 @@
 ---
 title: "RefineR Analysis Report"
-output: html_document
+output: pdf_document
 params:
   plot_result: NULL
   text_result: NULL
@@ -9,6 +9,12 @@ params:
 ## Analysis Output
 
 ### Result Plot
-```{r, echo=FALSE}
-params$plot_result
-cat(params$text_result, sep = "\n")
+```{r, echo=FALSE, fig.cap="RefineR analysis plot."}
+if (!is.null(params$plot_path) && file.exists(params$plot_path)) {
+  knitr::include_graphics(params$plot_path)
+}
+
+### Summary
+if (!is.null(params$text_result)) {
+  cat(params$text_result, sep = "\n")
+}

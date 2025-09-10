@@ -293,17 +293,33 @@ mainServer <- function(input, output, session, data_reactive, selected_dir_react
                           input$ref_low, input$ref_high)
   })
 
-   # =========================================================================
+  # =========================================================================
   # REPORT DOWNLOAD HANDLER
   # =========================================================================
   output$download_report <- downloadHandler(
     filename = function() {
-      paste0("RefineR_Report_", Sys.Date(), ".html")
+      paste0("RefineR_Report_", Sys.Date(), ".pdf")
     },
     content = function(file) {
-      # Save current plot to object
-      plot_obj <- recordPlot()
-
+      # Create a temporary directory to work in
+      temp_dir <- tempdir()
+      temp_report <- file.path(temp_dir, "report.Rmd")
+      
+      # Copy the template to the temporary directory
+      file.copy("template.Rmd", temp_report, overwrite = TRUE)
+      
+      # Create the plot and save it to a temporary file
+      temp_plot_path <- file.path(temp_dir, "refiner_plot.png")
+      png(temp_plot_path, width = 800, height = 600)
+      generate_refiner_plot(
+        refiner_model_rv(),
+        plot_title_rv(),
+        sprintf("%s [%s]", input$col_value, input$unit_input),
+        input$ref_low,
+        input$ref_high
+      )
+      dev.off()
+      
       # Capture summary text
       text_output <- capture.output({
         if (!is.null(filtered_data_reactive()$removed_rows)) {
@@ -313,13 +329,13 @@ mainServer <- function(input, output, session, data_reactive, selected_dir_react
         }
         print(refiner_model_rv())
       })
-
+      
       # Render the R Markdown file with parameters
       rmarkdown::render(
-        input = "report.Rmd",
+        input = temp_report,
         output_file = file,
         params = list(
-          plot_result = plot_obj,
+          plot_path = temp_plot_path,
           text_result = text_output
         ),
         envir = new.env(parent = globalenv())
