@@ -298,17 +298,17 @@ mainServer <- function(input, output, session, data_reactive, selected_dir_react
   # =========================================================================
   output$download_report <- downloadHandler(
     filename = function() {
-      paste0("RefineR_Report_", Sys.Date(), ".pdf")
+      paste0("RefineR_Report_", Sys.Date(), ".pdf")  # final output as PDF
     },
     content = function(file) {
-      # Create a temporary directory to work in
+      # Create a temporary directory
       temp_dir <- tempdir()
       temp_report <- file.path(temp_dir, "report.Rmd")
       
-      # Copy the template to the temporary directory
+      # Copy the template
       file.copy("template.Rmd", temp_report, overwrite = TRUE)
       
-      # Create the plot and save it to a temporary file
+      # Generate plot
       temp_plot_path <- file.path(temp_dir, "refiner_plot.png")
       png(temp_plot_path, width = 800, height = 600)
       generate_refiner_plot(
@@ -320,26 +320,32 @@ mainServer <- function(input, output, session, data_reactive, selected_dir_react
       )
       dev.off()
       
-      # Capture summary text
+      # Capture summary
       text_output <- capture.output({
         if (!is.null(filtered_data_reactive()$removed_rows)) {
           cat(paste0("Note: ",
-                     filtered_data_reactive()$removed_rows,
-                     " rows were removed due to missing or invalid data.\n\n"))
+                    filtered_data_reactive()$removed_rows,
+                    " rows were removed due to missing or invalid data.\n\n"))
         }
         print(refiner_model_rv())
       })
       
-      # Render the R Markdown file with parameters
+      # Render HTML first to a temporary file
+      temp_html <- file.path(temp_dir, "report.html")
       rmarkdown::render(
         input = temp_report,
-        output_file = file,
+        output_file = temp_html,
+        output_format = rmarkdown::html_document(toc = TRUE),
         params = list(
           plot_path = temp_plot_path,
           text_result = text_output
         ),
         envir = new.env(parent = globalenv())
       )
+      
+      # Convert the HTML to PDF using pagedown
+      # Make sure pagedown is installed: install.packages("pagedown")
+      pagedown::chrome_print(input = temp_html, output = file)
     }
   )
 }
