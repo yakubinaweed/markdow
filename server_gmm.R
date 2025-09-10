@@ -639,53 +639,57 @@ gmmServer <- function(input, output, session, gmm_uploaded_data_rv, gmm_processe
       paste0("GMM_Report_", Sys.Date(), ".pdf")
     },
     content = function(file) {
-      # Ensure results are available before attempting to generate a report
+      # --- CRUCIAL VALIDATION ---
+      # Ensure all required reactive values have data before proceeding.
       req(gmm_models_bic_rv(), gmm_processed_data_rv())
 
-      # Create a temporary directory to store the report and its assets
       temp_dir <- tempdir()
       temp_report_path <- file.path(temp_dir, "template_gmm.Rmd")
       file.copy("template_gmm.Rmd", temp_report_path, overwrite = TRUE)
 
+      # Initialize paths to NULL in case of failure
+      temp_bic_plot_path <- NULL
+      temp_scatter_plot_path <- NULL
+
       # --- Generate and save the BIC plot ---
-      temp_bic_plot_path <- file.path(temp_dir, "gmm_bic_plot.png")
-      png(temp_bic_plot_path, width = 800, height = 450, res = 100)
-      
-      # Explicitly get the BIC models from the reactive value
       bic_models <- gmm_models_bic_rv()
-      
-      # Plotting logic, ensuring it handles the data correctly
-      plot(bic_models$BIC,
-          legend.args = list(x = "bottomright", cex = 1.1, inset = c(0, 0.05)),
-          main = "BIC for GMM Models",
-          xlab = "Number of Components",
-          ylab = "BIC Value")
-          
-      dev.off() # Close the PNG device
+      # Check if the BIC object is valid and has data
+      if (!is.null(bic_models) && !is.null(bic_models$BIC)) {
+        temp_bic_plot_path <- file.path(temp_dir, "gmm_bic_plot.png")
+        png(temp_bic_plot_path, width = 800, height = 450, res = 100)
+        
+        # Corrected plot call: Removed the invalid 'legend.args' parameter
+        plot(bic_models$BIC,
+            main = "BIC for GMM Models",
+            xlab = "Number of Components",
+            ylab = "BIC Value")
+            
+        dev.off()
+      }
 
       # --- Generate and save the Scatter plot ---
-      temp_scatter_plot_path <- file.path(temp_dir, "gmm_scatter_plot.png")
-      png(temp_scatter_plot_path, width = 800, height = 600, res = 100)
-      
-      # Use the plotting function defined in the GMM server logic
-      plot_value_age(gmm_processed_data_rv()$bic, input$gmm_value_col, input$gmm_age_col)
-      
-      dev.off() # Close the PNG device
+      processed_data <- gmm_processed_data_rv()
+      if (!is.null(processed_data) && !is.null(processed_data$bic)) {
+        temp_scatter_plot_path <- file.path(temp_dir, "gmm_scatter_plot.png")
+        png(temp_scatter_plot_path, width = 800, height = 600, res = 100)
+        
+        plot_value_age(processed_data$bic, input$gmm_value_col, input$gmm_age_col)
+        
+        dev.off()
+      }
 
       # --- Capture the summary text ---
       summary_text_output <- capture.output({
         cat("GMM Analysis Summary:\n")
         cat("======================\n\n")
         
-        # Use the 'bic' object from the reactive value for the summary
-        gmm_results <- gmm_processed_data_rv()$bic
-        
-        if (!is.null(gmm_results) && inherits(gmm_results, "Mclust")) {
+        if (!is.null(processed_data) && inherits(processed_data$bic, "Mclust")) {
+          gmm_results <- processed_data$bic
           cat("Model chosen by BIC:", gmm_results$modelName, "\n")
           cat("Number of components (subpopulations):", gmm_results$G, "\n\n")
           print(summary(gmm_results, parameters = TRUE))
         } else {
-          cat("No GMM results available to summarize.")
+          cat("No GMM results available to summarize. Please run the analysis first.")
         }
       })
 
@@ -699,7 +703,7 @@ gmmServer <- function(input, output, session, gmm_uploaded_data_rv, gmm_processe
           scatter_plot_path = temp_scatter_plot_path,
           summary_text = paste(summary_text_output, collapse = "\n")
         ),
-        envir = new.env(parent = globalenv()) # Use a clean environment
+        envir = new.env(parent = globalenv())
       )
 
       # Convert HTML to PDF
