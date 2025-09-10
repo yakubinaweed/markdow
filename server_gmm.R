@@ -639,6 +639,8 @@ gmmServer <- function(input, output, session, gmm_uploaded_data_rv, gmm_processe
       paste0("GMM_Report_", Sys.Date(), ".pdf")
     },
     content = function(file) {
+      req(gmm_processed_data_rv())
+      
       # --- CRUCIAL VALIDATION ---
       # Ensure all required reactive values have data before proceeding.
       req(gmm_models_bic_rv(), gmm_processed_data_rv())

@@ -301,6 +301,8 @@ mainServer <- function(input, output, session, data_reactive, selected_dir_react
       paste0("Main_Analysis_Report_", Sys.Date(), ".pdf")
     },
     content = function(file) {
+      req(refiner_model_rv())
+      
       temp_dir <- tempdir()
       temp_report <- file.path(temp_dir, "template_main.Rmd")
       file.copy("template_main.Rmd", temp_report, overwrite = TRUE)
